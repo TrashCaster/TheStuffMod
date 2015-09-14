@@ -1,0 +1,32 @@
+{
+    "easel.erase.positive": {
+        category: "player",
+        sounds:[
+            "tsm:easel/erase_pos"
+        ]
+    },
+    "easel.erase.negative": {
+        category: "player",
+        sounds:[
+            "tsm:easel/erase_neg"
+        ]
+    },
+    "easel.draw.positive": {
+        category: "player",
+        sounds:[
+            "tsm:easel/draw_pos"
+        ]
+    },
+    "easel.draw.negative": {
+        category: "player",
+        sounds:[
+            "tsm:easel/draw_neg"
+        ]
+    },
+    "easel.fill": {
+        category: "player",
+        sounds:[
+            "tsm:easel/fill"
+        ]
+    }
+}

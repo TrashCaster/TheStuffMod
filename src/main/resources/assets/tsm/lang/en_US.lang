@@ -1,0 +1,10 @@
+item.canvas.name=Canvas
+item.easel.name=Easel
+item.palette.name=Palette
+item.canvas.info=Put this into an easel to paint on it
+item.easel.info=This is used to hold your canvas while you paint it\nHello
+item.palette.info=This is used to paint on your canvas
+entity.Easel.name=Easel
+key.itemInfo=Show Item Info
+tooltip.unpressed=Hold '%s' to see item information
+tooltip.pressed.nofind=No item information found for '%s'
