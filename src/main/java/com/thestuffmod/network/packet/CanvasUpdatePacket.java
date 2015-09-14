@@ -26,6 +26,9 @@ import com.google.common.base.Predicate;
 import com.thestuffmod.TSM;
 import com.thestuffmod.entity.item.EntityEasel;
 
+/*
+ * This is a packet that updates the canvas image from the client's designer interface to the easel's item stack
+ */
 public class CanvasUpdatePacket implements IPacket {
 
 	int[] pixelData;
@@ -86,22 +89,19 @@ public class CanvasUpdatePacket implements IPacket {
 
 	@Override
 	public void handleServerSide(final NetHandlerPlayServer nhServer) {
-		List<EntityEasel> easels = nhServer.playerEntity.worldObj.getEntities(
-				EntityEasel.class, new Predicate() {
+		List<EntityEasel> easels = nhServer.playerEntity.worldObj.getEntities(EntityEasel.class, new Predicate() {
 					public boolean apply(EntityEasel entity) {
 						return entity.getPositionVector().distanceTo(
 								nhServer.playerEntity.getPositionVector()) < 8f;
 					}
 
 					public boolean apply(Object object) {
-						return this.apply((EntityEasel) object);
+						return object instanceof EntityEasel && this.apply((EntityEasel) object);
 					}
 				});
 		EntityEasel easel = null;
 		for (EntityEasel e : easels) {
-			if (e.getEditedByPlayer() != null
-					&& e.getEditedByPlayer().getUniqueID()
-							.equals(nhServer.playerEntity.getUniqueID())) {
+			if (e.getEditedByPlayer() != null && e.getEditedByPlayer().getUniqueID().equals(nhServer.playerEntity.getUniqueID())) {
 				easel = e;
 				break;
 			}

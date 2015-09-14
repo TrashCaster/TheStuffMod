@@ -9,22 +9,27 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+
+/*
+ * This was the class I created to turn the GL textures into 'TextureAtlasSprites'.
+ * The whole thing never worked for me, so I commented out the phase that implements this.
+ * Un-comment it to see its behavior
+ * see ClientEventHandler @onTextureStitch(TextureStitchEvent.Post event)
+ */
 
 @SideOnly(Side.CLIENT)
 public class TextureCanvas extends TextureAtlasSprite {
 
 	public TextureCanvas(String spriteName) {
 		super(spriteName);
-		System.out.println("Created");
-		System.out.println("");
 	}
 	
 	@Override
     public void updateAnimation()
     {
-		System.out.println("Update");
         Minecraft minecraft = Minecraft.getMinecraft();
 
         if (minecraft.theWorld != null && minecraft.thePlayer != null && minecraft.thePlayer.getHeldItem() != null && minecraft.thePlayer.getHeldItem().getItem().equals(TSM.canvasItem))

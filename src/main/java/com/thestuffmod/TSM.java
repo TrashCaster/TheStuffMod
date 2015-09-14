@@ -48,6 +48,11 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+
+/*
+ * This is more of an All-In-One/Random Additions mod I am making. I add whatever I feel like, either for
+ * the educational experience, or for adding more to the game. This is why it is called "The Stuff Mod"
+ */
 @Mod(modid = TSM.MODID, name = TSM.NAME, version = TSM.VERSION)
 public class TSM {
 	public static final String MODID = "tsm";
@@ -63,14 +68,37 @@ public class TSM {
 	public static PacketManager packetManager = new PacketManager(NAME,MODID);
 	public static CommonEventHandler eventHandler = new CommonEventHandler();
 
+	
+	// <----- Start of canvas related code ----->
 	public static Item canvasItem;
 	public static Item easelItem;
 	public static Item paletteItem;
 
+	/*
+	 * List of cached UUIDs (used on the canvas item to determine which texture to use)
+	 */
 	public static ArrayList<UUID> canvasUniqueIDs = new ArrayList<UUID>();
+
+	/*
+	 * List of cached UUIDs that need to have updates applied
+	 */
 	public static ArrayList<UUID> canvasUpdateQueue = new ArrayList<UUID>();
+
+	/*
+	 * Map of UUIDs with GL texture IDs
+	 */
 	public static HashMap<UUID, Integer> canvasGLTextures = new HashMap<UUID, Integer>();
+
+	// <----- End of canvas related code ----->
+	
+	/*
+	 * Map of player UUIDs containing their last entered chat
+	 */
 	public static HashMap<UUID, String> lastChat = new HashMap<UUID, String>();
+	
+	/*
+	 * Map of player UUIDs containing their last entered chat time-stamp
+	 */
 	public static HashMap<UUID, Long> lastChatTime = new HashMap<UUID, Long>();
 
 	public static File configDir;
@@ -81,8 +109,10 @@ public class TSM {
 	public void preInit(FMLPreInitializationEvent event) {
 		proxy.preInit();
 		String path = event.getModConfigurationDirectory().getAbsolutePath();
-		configDir = new File(path.substring(0, path.lastIndexOf("config"))
-				.concat("mods/" + NAME + "/"));
+		/*
+		 * Folder: /mods/The Stuff Mod/
+		 */
+		configDir = new File(path.substring(0, path.lastIndexOf("config")).concat("mods/" + NAME + "/"));
 		loadCanvasIDs();
 	}
 
@@ -98,6 +128,11 @@ public class TSM {
 		packetManager.postInitialise();
 	}
 
+	/*
+	 * Save canvas image UUID list to a file
+	 * This allows the client to load the images
+	 * when the game starts (pre-caching)
+	 */
 	public static synchronized void saveCanvasIDs() {
 		File f = new File(configDir, "registered-canvas-list.keep");
 		try {
@@ -121,6 +156,11 @@ public class TSM {
 		}
 	}
 
+	/*
+	 * Load canvas image UUID list from a file
+	 * This allows the client to load the images
+	 * when the game starts (pre-caching)
+	 */
 	public static synchronized void loadCanvasIDs() {
 		File f = new File(configDir, "registered-canvas-list.keep");
 		try {

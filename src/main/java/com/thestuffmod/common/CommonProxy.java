@@ -41,8 +41,12 @@ public class CommonProxy implements IGuiHandler {
     	TSM.paletteItem = new ItemPalette();
         
 
-    	int easelID = 31;
-		EntityRegistry.registerModEntity(EntityEasel.class, "easel", easelID, "tsm", 64, 20, false);
+    	/*
+    	 * Easel entity. This is used to draw paintings. Plop a canvas onto the easel, and then interact with the easel
+    	 * with a palette in hand. Remove the canvas after-wards by interacting again with an open hand
+    	 */
+    	int easelID = 0;
+		EntityRegistry.registerModEntity(EntityEasel.class, "easel", easelID, "tsm", 64, 20, true);
 		EntityList.addMapping(EntityEasel.class, "Easel", easelID);
     }
     
@@ -72,6 +76,12 @@ public class CommonProxy implements IGuiHandler {
 		}
 		return null;
 	}
+	
+	/*
+	 * Converts a one dimensional 64x64 array to a BufferedImage, and saves it
+	 * This is saved server-side in order to allow server owners to check
+	 * for inappropriate drawings, and remove them via commands
+	 */
 	
 	public void updateImage(UUID id, int[] pixelData) {
 		BufferedImage bi = new BufferedImage(64, 64,BufferedImage.TYPE_INT_ARGB);
@@ -106,7 +116,8 @@ public class CommonProxy implements IGuiHandler {
 		}
 		try {
 			ImageIO.write(bi, "PNG", image);
-		} catch (IOException e1) {
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 }

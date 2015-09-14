@@ -46,9 +46,4 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class CommonEventHandler {
 
-
-	@SubscribeEvent
-	public void onEntityUpdate(LivingUpdateEvent event) {
-
-	}
 }

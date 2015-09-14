@@ -36,50 +36,40 @@ import com.thestuffmod.item.ItemEasel;
 import com.thestuffmod.item.ItemPalette;
 
 public class ClientProxy extends CommonProxy {
-	
+
 	public static ModelEasel easelModel = new ModelEasel();
 	public static ResourceLocation easelTexture = new ResourceLocation(TSM.MODID, "textures/entity/easel.png");
 	public static ClientEventHandler eventHandler;
-	
+
 	@Override
 	public void preInit() {
 		super.preInit();
 	}
-	
+
 	public void init() {
 		super.init();
 		eventHandler = new ClientEventHandler();
 		RenderItem renderItem = Minecraft.getMinecraft().getRenderItem();
-		renderItem.getItemModelMesher().register(
-				TSM.canvasItem,
-				0,
-				new ModelResourceLocation(TSM.MODID + ":"
-						+ (ItemCanvas.getName()), "inventory"));
-		renderItem.getItemModelMesher().register(
-				TSM.easelItem,
-				0,
-				new ModelResourceLocation(TSM.MODID + ":"
-						+ (ItemEasel.getName()), "inventory"));
-		renderItem.getItemModelMesher().register(
-				TSM.paletteItem,
-				0,
-				new ModelResourceLocation(TSM.MODID + ":"
-						+ (ItemPalette.getName()), "inventory"));
+		renderItem.getItemModelMesher().register(TSM.canvasItem,0,new ModelResourceLocation(TSM.MODID + ":" + (ItemCanvas.getName()), "inventory"));
+		renderItem.getItemModelMesher().register(TSM.easelItem,0,new ModelResourceLocation(TSM.MODID + ":" + (ItemEasel.getName()), "inventory"));
+		renderItem.getItemModelMesher().register(TSM.paletteItem,0,new ModelResourceLocation(TSM.MODID + ":" + (ItemPalette.getName()), "inventory"));
 
-		RenderingRegistry
-				.registerEntityRenderingHandler(EntityEasel.class,
-						new RenderEasel(Minecraft.getMinecraft()
-								.getRenderManager()));
+		RenderingRegistry.registerEntityRenderingHandler(EntityEasel.class,new RenderEasel(Minecraft.getMinecraft().getRenderManager()));
 
 		MinecraftForge.EVENT_BUS.register(eventHandler);
 		FMLCommonHandler.instance().bus().register(eventHandler);
-		
+
 	}
-	
+
+	/*
+	 * Converts a one dimensional 64x64 array to a BufferedImage, saves it,
+	 * and turns it into a GL texture, allowing it to be used by the rendering
+	 * methods. It gets stored into a UUID,int HashMap
+	 */
+
 	@Override
 	public void updateImage(UUID id, int[] pixelData) {
-		BufferedImage bi = new BufferedImage(64, 64,
-				BufferedImage.TYPE_INT_ARGB);
+		BufferedImage bi = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
 		Color none = new Color(0f, 0f, 0f, 0f);
 		Graphics2D g = bi.createGraphics();
 		g.setBackground(none);
@@ -112,37 +102,28 @@ public class ClientProxy extends CommonProxy {
 		}
 		try {
 			ImageIO.write(bi, "PNG", image);
-		} catch (IOException e1) {
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		
-		boolean openGL = false;
-		try {
-			Class.forName("org.lwjgl.opengl.GL11");
-			openGL = true;
-		} catch (ClassNotFoundException e) {
-			
-		}
-		try {
-			if (image.exists() && openGL) {
-				try {
-					bi = ImageIO.read(image);
-				} catch (IOException e) {
+
+		if (image.exists()) {
+			try {
+				bi = ImageIO.read(image);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			if (bi != null) {
+				int i = -1;
+				if (TSM.canvasGLTextures.get(id) != null) {
+					i = TSM.canvasGLTextures.get(id).intValue();
+				} else {
+					i = GL11.glGenTextures();
+					TSM.canvasGLTextures.put(id,
+							Integer.valueOf(i));
 				}
-				if (bi != null) {
-					int i = -1;
-					if (TSM.canvasGLTextures.get(id) != null) {
-						i = TSM.canvasGLTextures.get(id).intValue();
-					} else {
-						i = GL11.glGenTextures();
-						TSM.canvasGLTextures.put(id,
-								Integer.valueOf(i));
-					}
-					TextureUtil.uploadTextureImageAllocate(i, bi,
-							false, false);
-				}
-		}
-		} catch (RuntimeException e) {
-			
+				TextureUtil.uploadTextureImageAllocate(i, bi,
+						false, false);
+			}
 		}
 	}
 
