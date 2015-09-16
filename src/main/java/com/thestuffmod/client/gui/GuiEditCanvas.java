@@ -1,7 +1,12 @@
 package com.thestuffmod.client.gui;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -9,6 +14,13 @@ import java.util.LinkedList;
 import java.util.Random;
 import java.util.UUID;
 import java.util.Vector;
+
+import javax.imageio.ImageIO;
+import javax.swing.JFileChooser;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import javafx.scene.shape.Line;
 import net.minecraft.client.Minecraft;
@@ -21,6 +33,7 @@ import net.minecraftforge.common.util.Constants;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.GL11;
 
 import com.thestuffmod.TSM;
@@ -33,10 +46,12 @@ public class GuiEditCanvas extends GuiScreen {
 	private GuiButton modeButton;
 	private GuiButton gridToggle;
 	private GuiButton brushButton;
+	private GuiButton importButton;
 
 	private GuiColorSlider redSlider;
 	private GuiColorSlider greenSlider;
 	private GuiColorSlider blueSlider;
+	private GuiNoiseSlider noiseSlider;
 	private int soundWait = 0;
 
 	private ResourceLocation canvasTexture = new ResourceLocation(TSM.MODID,
@@ -57,7 +72,7 @@ public class GuiEditCanvas extends GuiScreen {
 	int brushButtonState = 0;
 	ArrayList<Integer> selectedIndexes = new ArrayList<Integer>();
 	boolean grid = false;
-	
+
 	long noiseSeed = (new Random()).nextLong();
 
 	private int[] pixels = null;
@@ -73,13 +88,18 @@ public class GuiEditCanvas extends GuiScreen {
 	}
 
 	public void initGui() {
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		this.buttonList.clear();
 		Keyboard.enableRepeatEvents(true);
 		this.buttonList.add(this.doneBtn = new GuiButton(0,
 				this.width / 2 - 100, this.height - this.height / 8, I18n
 				.format("gui.done", new Object[0])));
 		this.buttonList.add(this.modeButton = new GuiButton(1, 20,
-				this.height / 2 + 85, 80, 20, "Mode: Draw"));
+				this.height / 2 + 85, 80, 20, ""));
 		this.buttonList.add(this.brushButton = new GuiButton(2, 20,
 				this.height / 2 + 25, 80, 20, "Brush Size: 1"));
 		this.buttonList.add(this.gridToggle = new GuiButton(3,
@@ -91,9 +111,16 @@ public class GuiEditCanvas extends GuiScreen {
 				this.height / 2 - 30, "Green"));
 		this.buttonList.add(this.blueSlider = new GuiColorSlider(6, 20,
 				this.height / 2 - 5, "Blue"));
+		this.buttonList.add(this.noiseSlider = new GuiNoiseSlider(7, 20,
+				this.height / 2 - 5, "Noise"));
+		this.buttonList.add(this.importButton = new GuiButton(8,
+				20, this.height / 2 + 55, 80, 20,
+				I18n.format("Choose Image", new Object[0])));
 		this.brushButton.displayString = "Brush Size: " + brushSize;
 		this.gridToggle.displayString = "Grid: "+(grid ? "ON":"OFF");
 		String mode = "NULL";
+		this.importButton.visible = false;
+		this.noiseSlider.visible = false;
 		switch (this.brushMode) {
 		case 0:
 			mode = "Draw";
@@ -106,9 +133,11 @@ public class GuiEditCanvas extends GuiScreen {
 			break;
 		case 3:
 			mode = "Noise";
+		case 4:
+			mode = "Import";
 			break;
 		}
-		this.modeButton.displayString = "Mode: "+mode;
+		this.modeButton.displayString = "\u00a7bMode: \u00a7a\u00a7n"+mode;
 	}
 
 	public void onGuiClosed() {
@@ -121,12 +150,12 @@ public class GuiEditCanvas extends GuiScreen {
 
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
 		if (soundWait > 0) {
-		    soundWait -= 1;
+			soundWait -= 1;
 		}
 		cursor.setLocation(this.getSelectedPixelX(mouseX),
 				this.getSelectedPixelY(mouseY));
 		selectedIndexes.clear();
-		if (grid) {
+		if (grid && brushMode != 2) {
 			cursor.setLocation(
 					(int) Math.floor((float) this.getSelectedPixelX(mouseX)
 							/ (float) brushSize)
@@ -177,12 +206,12 @@ public class GuiEditCanvas extends GuiScreen {
 				textLines.add("Flood fill color to the");
 				textLines.add("canvas");
 				textLines.add("");
-				textLines.add("This will replace a");
-				textLines.add("colored area with another");
+				textLines.add("This will replace an area");
+				textLines.add("of color with another");
 				textLines.add("color");
 				textLines.add("");
-				textLines.add("Brush size doesn't affect");
-				textLines.add("this tool");
+				textLines.add("Brush size doesn't");
+				textLines.add("affect this tool");
 			}
 			if (this.brushMode == 3) {
 				textLines.add("\u00a7eNoise Mode");
@@ -201,6 +230,18 @@ public class GuiEditCanvas extends GuiScreen {
 				textLines.add("");
 				textLines.add("The grid size boundaries");
 				textLines.add("are based on brush size");
+			}
+			if (this.brushMode == 4) {
+				textLines.add("\u00a7eImport Mode");
+				textLines.add("");
+				textLines.add("Choose an image from");
+				textLines.add("your computer to use as");
+				textLines.add("the painting");
+				textLines.add("");
+				textLines.add("It will automatically be");
+				textLines.add("rescaled to 64x64");
+				textLines.add("without maintaining");
+				textLines.add("aspect ratio");
 			}
 
 			int maxWidth = 0;
@@ -225,20 +266,29 @@ public class GuiEditCanvas extends GuiScreen {
 			this.drawModalRectWithCustomSizedTexture(this.width / 2 - 64,
 					this.height / 2 - 64, 0, 0, 128, 128, 128, 128);
 			GL11.glPopMatrix();
+			Random rand = new Random(noiseSeed);
 			for (int x = 0; x < 64; x++) {
 				for (int y = 0; y < 64; y++) {
 					int index = x + (y * 64);
 					if (this.pixels[index] != none.getRGB() && (this.brushMode != 1 || selectedIndexes.isEmpty() || !selectedIndexes.contains(Integer.valueOf(index)))) {
 						Color c = new Color(pixels[index], true);
-						GL11.glPushMatrix();
-						GL11.glColor3f((float) c.getRed() / 255f,
-								(float) c.getGreen() / 255f,
-								(float) c.getBlue() / 255f);
-						this.drawRect(this.width / 2 - 64 + x * 2, this.height
-								/ 2 - 64 + y * 2, this.width / 2 - 64 + x * 2
-								+ 2, this.height / 2 - 64 + y * 2 + 2,
-								pixels[index]);
-						GL11.glPopMatrix();
+						int r = c.getRed();
+						int g = c.getGreen();
+						int b = c.getBlue();
+						int a = c.getAlpha();
+
+						if (this.brushMode == 3 && x >= cursor.x && y >= cursor.y && x < cursor.x+brushSize && y < cursor.y + brushSize && cursor.x >= 0 && cursor.y >= 0 && cursor.x < 64 && cursor.y < 64) {
+							double amtChange = (-1d+(rand.nextDouble()*2))*((double)(rand.nextInt(noiseSlider.getNormalisedValue())+1)*10d);
+							r += (int)amtChange;
+							g += (int)amtChange;
+							b += (int)amtChange;
+							r = Math.min(Math.max(0, r), 255);
+							g = Math.min(Math.max(0, g), 255);
+							b = Math.min(Math.max(0, b), 255);
+							c = new Color(r,g,b,a);
+						}
+						this.drawRect(this.width / 2 - 64 + x * 2, this.height / 2 - 64 + y * 2, this.width / 2 - 64 + x * 2 + 2, this.height / 2 - 64 + y * 2 + 2,
+								c.getRGB());
 					}
 				}
 			}
@@ -273,18 +323,11 @@ public class GuiEditCanvas extends GuiScreen {
 			super.drawScreen(mouseX, mouseY, partialTicks);
 			if (cursor.x >= 0 && this.cursor.y >= 0 && cursor.x <= 63
 					&& cursor.y <= 63 && this.brushMode == 0) {
-				GL11.glPushMatrix();
-				GL11.glColor3f((float) current.getRed() / 255f,
-						(float) current.getGreen() / 255f,
-						(float) current.getBlue() / 255f);
-				this.drawRect(this.width / 2 - 64 + (cursor.x + brushSize / 2)
-						* 2 - (brushSize - 1), this.height / 2 - 64
-						+ (cursor.y + brushSize / 2) * 2 - (brushSize - 1),
+				this.drawRect(this.width / 2 - 64 + (cursor.x + brushSize / 2) * 2 - (brushSize - 1), this.height / 2 - 64 + (cursor.y + brushSize / 2) * 2 - (brushSize - 1),
 						this.width / 2 - 64 + (cursor.x + brushSize / 2) * 2
 						+ brushSize, this.height / 2 - 64
 						+ (cursor.y + brushSize / 2) * 2 + brushSize,
 						current.getRGB());
-				GL11.glPopMatrix();
 			}
 			if (this.brushMode == 0 && mouseX > 120 && mouseX < width - 120 && mouseY  > 20 && mouseY < height-height/8) {
 				mc.renderEngine.bindTexture(drawTexture);
@@ -314,7 +357,7 @@ public class GuiEditCanvas extends GuiScreen {
 						mouseY - 12, 0, 0, 12, 12, 12, 12);
 				GL11.glPopMatrix();
 			}
-				this.drawHoveringText(textLines, this.width+10, 20);
+			this.drawHoveringText(textLines, this.width+10, 20);
 		} catch (Exception e) {
 		}
 	}
@@ -329,7 +372,7 @@ public class GuiEditCanvas extends GuiScreen {
 
 			if (cursor.x >= 0 && cursor.y >= 0 && cursor.x <= 63 && cursor.y <= 63) {
 				if (brushMode == 2) {
-				    Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.fill", 0.5f, 1f);
+					Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.fill", 0.5f, 1f);
 					Color c = new Color(pixels[cursor.x+(cursor.y*64)], true);
 					this.fillSpreadingColor(cursor.x, cursor.y, c, current);
 				} else {
@@ -349,17 +392,18 @@ public class GuiEditCanvas extends GuiScreen {
 								break;
 							case 3:
 								int colorI = pixels[index];
-								Color color = new Color(colorI);
-								double amtChange = (-1d+(r.nextDouble()*2))*((double)(r.nextInt(10)+1)*10d);
-								int red = color.getRed()+(int)amtChange;
-								int green = color.getGreen()+(int)amtChange;
-								int blue = color.getBlue()+(int)amtChange;
-								red = Math.min(Math.max(0, red), 255);
-								green = Math.min(Math.max(0, green), 255);
-								blue = Math.min(Math.max(0, blue), 255);
-								Color newColor = new Color(red,green,blue, 255);
-								pixels[index] = newColor.getRGB();
-								System.out.println("Offset color by: "+amtChange);
+								if (colorI != none.getRGB()) {
+									Color color = new Color(colorI, true);
+									double amtChange = (-1d+(r.nextDouble()*2))*((double)(r.nextInt(noiseSlider.getNormalisedValue())+1)*10d);
+									int red = color.getRed()+(int)amtChange;
+									int green = color.getGreen()+(int)amtChange;
+									int blue = color.getBlue()+(int)amtChange;
+									red = Math.min(Math.max(0, red), 255);
+									green = Math.min(Math.max(0, green), 255);
+									blue = Math.min(Math.max(0, blue), 255);
+									Color newColor = new Color(red,green,blue, 255);
+									pixels[index] = newColor.getRGB();
+								}
 								break;
 							}
 						}
@@ -381,26 +425,26 @@ public class GuiEditCanvas extends GuiScreen {
 		if (cursor.x >= 0 && cursor.y >= 0 && cursor.x <= 63 && cursor.y <= 63) {
 			int dX = Mouse.getDX();
 			int dY = Mouse.getDY();
-			
+
 			int dist = (int)Math.sqrt((dX*dX)+(dY*dY));
 			int angle = (int)Math.toDegrees(Math.atan2(dY, dX));
 			int maxDist = 64;
-			
+
 			double ratio = ((double)dist/(double)maxDist);
 			if (ratio < 0d) ratio = 0d;
 			if (ratio > 2d) ratio = 2d;
 			if (this.brushMode == 0 && dist > 4) {
 				if (angle > 0 && angle < 180) {
-				    Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.draw.positive", 0.5f, (float)ratio/4f);
+					Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.draw.positive", 0.5f, (float)ratio/4f);
 				} else {
-				    Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.draw.negative", 0.5f, (float)ratio/4f);
+					Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.draw.negative", 0.5f, (float)ratio/4f);
 				}
 			}
 			if (this.brushMode == 1 && dist > 4) {
 				if (angle > 0 && angle < 180) {
-				    Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.erase.positive", 0.5f, (float)ratio*2f);
+					Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.erase.positive", 0.5f, (float)ratio*2f);
 				} else {
-				    Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.erase.negative", 0.5f, (float)ratio*2f);
+					Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.erase.negative", 0.5f, (float)ratio*2f);
 				}
 			}
 			for (int xx = (-brushSize - 1) / 2; xx < brushSize / 2; xx++) {
@@ -441,7 +485,7 @@ public class GuiEditCanvas extends GuiScreen {
 		}
 		if (button.id == 1) { // Mode button
 			String mode = "NULL";
-			this.brushMode = (this.brushMode+1) % 4;
+			this.brushMode = (this.brushMode+1) % 5;
 			switch (this.brushMode) {
 			case 0: // draw
 				mode = "Draw";
@@ -449,6 +493,9 @@ public class GuiEditCanvas extends GuiScreen {
 				this.greenSlider.visible = true;
 				this.blueSlider.visible = true;
 				this.brushButton.visible = true;
+				this.gridToggle.visible = true;
+				this.noiseSlider.visible = false;
+				this.importButton.visible = false;
 				break;
 			case 1: // erase
 				mode = "Erase";
@@ -456,6 +503,9 @@ public class GuiEditCanvas extends GuiScreen {
 				this.greenSlider.visible = false;
 				this.blueSlider.visible = false;
 				this.brushButton.visible = true;
+				this.gridToggle.visible = true;
+				this.noiseSlider.visible = false;
+				this.importButton.visible = false;
 				break;
 			case 2: // fill
 				mode = "Fill";
@@ -463,6 +513,9 @@ public class GuiEditCanvas extends GuiScreen {
 				this.greenSlider.visible = true;
 				this.blueSlider.visible = true;
 				this.brushButton.visible = false;
+				this.gridToggle.visible = false;
+				this.noiseSlider.visible = false;
+				this.importButton.visible = false;
 				break;
 			case 3: // noise
 				mode = "Noise";
@@ -470,9 +523,22 @@ public class GuiEditCanvas extends GuiScreen {
 				this.greenSlider.visible = false;
 				this.blueSlider.visible = false;
 				this.brushButton.visible = true;
+				this.gridToggle.visible = true;
+				this.noiseSlider.visible = true;
+				this.importButton.visible = false;
+				break;
+			case 4: // import
+				mode = "Import";
+				this.redSlider.visible = false;
+				this.greenSlider.visible = false;
+				this.blueSlider.visible = false;
+				this.brushButton.visible = false;
+				this.gridToggle.visible = false;
+				this.noiseSlider.visible = false;
+				this.importButton.visible = true;
 				break;
 			}
-			this.modeButton.displayString = "Mode: "+mode;
+			this.modeButton.displayString = "\u00a7bMode: \u00a7a\u00a7n"+mode;
 		}
 		if (button.id == 2) { // Brush button
 			this.brushButtonState = (brushButtonState + 1) % 6;
@@ -502,10 +568,60 @@ public class GuiEditCanvas extends GuiScreen {
 			this.grid = !grid;
 			this.gridToggle.displayString = "Grid: "+(grid?"ON":"OFF");
 		}
+		if (button.id == 8) { // Import button
+			JFileChooser chooser = new JFileChooser();
+			FileFilter filter = new FileFilter(){
+
+				@Override
+				public boolean accept(File f) {
+					if (f.isFile() && f.getPath().toLowerCase().endsWith(".png")) {
+						return true;
+					}
+					if (f.isFile() && f.getPath().toLowerCase().endsWith(".gif")) {
+						return true;
+					}
+					if (f.isFile() && f.getPath().toLowerCase().endsWith(".jpg")) {
+						return true;
+					}
+					if (f.isFile() && f.getPath().toLowerCase().endsWith(".bmp")) {
+						return true;
+					}
+					return false;
+				}
+
+				@Override
+				public String getDescription() {
+					return "Supported Image Files (*.png, *.gif, *.jpg, *.bmp)";
+				}}; 
+				chooser.setFileFilter(filter);
+				chooser.setMultiSelectionEnabled(false);
+				int action = chooser.showOpenDialog(Display.getParent());
+				if (action == JFileChooser.APPROVE_OPTION) {
+					File file = chooser.getSelectedFile();
+					BufferedImage image = resize(ImageIO.read(file), 64, 64);
+					for (int x = 0; x<64; x++) {
+						for (int y = 0; y<64; y++) {
+							Color c = new Color(image.getRGB(x, y), true);
+							int r = c.getRed();
+							int g = c.getGreen();
+							int b = c.getBlue();
+							int a = (int)(Math.round((double)c.getAlpha()/255d)*255d);
+
+							if (a == 0) {
+								r = 0;
+								g = 0;
+								b = 0;
+							}
+
+							pixels[x+(y*64)] = new Color(r,g,b,a).getRGB();
+						}
+					}
+				}
+				Minecraft.getMinecraft().thePlayer.playSound("tsm:easel.import", 1f, 1f);
+		}
 	}
 
-	public void fillSpreadingColor(int x, int y, Color test,
-			Color set) {
+	public void fillSpreadingColor(int x, int y, Color test, Color set) {
 		if (x >= 0 && x < 64 && y >= 0 && y < 64) {
 			if (test.getRGB() == set.getRGB()) {
 				return;
@@ -520,5 +636,17 @@ public class GuiEditCanvas extends GuiScreen {
 			fillSpreadingColor(x,y+1,test,set);
 		}
 	}
+
+	private BufferedImage resize(BufferedImage img, int newW, int newH) {  
+		int w = img.getWidth();  
+		int h = img.getHeight();  
+		BufferedImage dimg = new BufferedImage(newW, newH, img.getType());  
+		Graphics2D g = dimg.createGraphics();  
+		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+				RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);  
+		g.drawImage(img, 0, 0, newW, newH, 0, 0, w, h, null);  
+		g.dispose();  
+		return dimg;  
+	}  
 
 }

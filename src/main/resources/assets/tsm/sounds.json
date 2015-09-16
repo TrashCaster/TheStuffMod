@@ -28,5 +28,11 @@
         sounds:[
             "tsm:easel/fill"
         ]
+    },
+    "easel.import": {
+        category: "player",
+        sounds:[
+            "tsm:easel/import"
+        ]
     }
 }

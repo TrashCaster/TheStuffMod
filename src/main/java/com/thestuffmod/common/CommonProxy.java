@@ -32,6 +32,8 @@ import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.network.IGuiHandler;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
 import net.minecraftforge.fml.common.registry.GameData;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class CommonProxy implements IGuiHandler {
 
@@ -45,7 +47,7 @@ public class CommonProxy implements IGuiHandler {
     	 * Easel entity. This is used to draw paintings. Plop a canvas onto the easel, and then interact with the easel
     	 * with a palette in hand. Remove the canvas after-wards by interacting again with an open hand
     	 */
-    	int easelID = 0;
+    	int easelID = 31;
 		EntityRegistry.registerModEntity(EntityEasel.class, "easel", easelID, "tsm", 64, 20, true);
 		EntityList.addMapping(EntityEasel.class, "Easel", easelID);
     }
@@ -82,7 +84,7 @@ public class CommonProxy implements IGuiHandler {
 	 * This is saved server-side in order to allow server owners to check
 	 * for inappropriate drawings, and remove them via commands
 	 */
-	
+
 	public void updateImage(UUID id, int[] pixelData) {
 		BufferedImage bi = new BufferedImage(64, 64,BufferedImage.TYPE_INT_ARGB);
 		Color none = new Color(0f, 0f, 0f, 0f);

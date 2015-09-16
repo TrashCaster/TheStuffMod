@@ -22,6 +22,8 @@ import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.FMLContainer;
 import net.minecraftforge.fml.common.event.FMLEvent;
 import net.minecraftforge.fml.common.network.FMLEventChannel;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import org.lwjgl.opengl.GL11;
 
@@ -65,6 +67,9 @@ public class ClientProxy extends CommonProxy {
 	 * Converts a one dimensional 64x64 array to a BufferedImage, saves it,
 	 * and turns it into a GL texture, allowing it to be used by the rendering
 	 * methods. It gets stored into a UUID,int HashMap
+	 * 
+	 * Runtime exception is caused by the server executing this method. No idea why this does that
+	 * But it happens
 	 */
 
 	@Override
@@ -106,6 +111,7 @@ public class ClientProxy extends CommonProxy {
 			e.printStackTrace();
 		}
 
+		try {
 		if (image.exists()) {
 			try {
 				bi = ImageIO.read(image);
@@ -124,6 +130,9 @@ public class ClientProxy extends CommonProxy {
 				TextureUtil.uploadTextureImageAllocate(i, bi,
 						false, false);
 			}
+		}
+		} catch (RuntimeException e) {
+			
 		}
 	}
 
